@@ -1,0 +1,118 @@
+#!/bin/bash
+###############################################################################
+#
+# Copyright (c) 2022  Marc Chassoulier  <marc@chassoulier.com>
+# 
+#
+# pandoradocker	Retrieve all docker information
+#		 
+#		 
+#
+# Sample usage:	./pandoradocker
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the Apache License as published by
+# the Apache Foundation; version 2 of the License.
+# 
+###############################################################################
+
+declare -A container
+container_count=0
+
+send_module_information ()
+{
+	echo "<module>"
+	echo "  <name>$1</name>"
+	echo "  <type>$4</type>"
+	echo "  <data>$2</data>"
+	echo "  <description><![CDATA[$3]]></description>"
+	echo "  <module_group><![CDATA[Docker]]></module_group>"
+	echo "</module>"
+}
+
+send_module_information_b ()
+{
+	echo "<module>"
+	echo "  <name>$1</name>"
+	echo "  <type>generic_proc</type>"
+	echo "  <data>$2</data>"
+	echo "  <description><![CDATA[$3]]></description>"
+	echo "  <module_group><![CDATA[Docker]]></module_group>"
+	echo "</module>"
+}
+
+send_module_information_d ()
+{
+	echo "<module>"
+	echo "  <name>$1</name>"
+	echo "  <type>generic_data</type>"
+	echo "  <data>$2</data>"
+	echo "  <description><![CDATA[$3]]></description>"
+	echo "  <module_group><![CDATA[Docker]]></module_group>"
+	echo "</module>"
+}
+
+send_module_information_s ()
+{
+	echo "<module>"
+	echo "  <name>$1</name>"
+	echo "  <type>generic_data_string</type>"
+	echo "  <data>$2</data>"
+	echo "  <description><![CDATA[$3]]></description>"
+	echo "  <module_group><![CDATA[Docker]]></module_group>"
+	echo "</module>"
+}
+
+
+general_docker ()
+{
+	docker_active=$(systemctl status docker | grep Active | grep running | wc -l )
+	send_module_information_b 'Docker state' "$docker_active" "Docker General Running"
+	docker_total_images=$(docker system df | grep Images | awk '{printf $2}')
+	send_module_information_d "Docker Image Total" "$docker_total_images" "Number of all image on docker"
+	docker_active_images=$(docker system df | grep Images | awk '{printf $3}')
+	send_module_information_d "Docker Image Active" "$docker_active_images" "Number of active image on docker"
+	docker_size_images=$(docker system df | grep Images | awk '{printf $4}')
+	send_module_information_s "Docker Image Size" "$docker_size_images" "Size used by all images"
+	docker_size_images=$(docker system df | grep Images | awk '{printf $5}')
+	send_module_information_s "Docker Image Size Claimable" "$docker_size_images" "Size used by not used images"	
+	docker_total_containers=$(docker system df | grep Containers | awk '{printf $2}')
+	send_module_information_d "Docker Container Total" "$docker_total_containers" "Number of all containers on docker"
+	docker_active_containers=$(docker system df | grep Containers | awk '{printf $3}')
+	send_module_information_d "Docker Container Active" "$docker_active_containers" "Number of active containers on docker"
+	docker_size_containers=$(docker system df | grep Containers | awk '{printf $4}')
+	send_module_information_s "Docker Container Size" "$docker_size_containers" "Size used by all containers"
+	docker_size_containers=$(docker system df | grep Containers | awk '{printf $5}' )
+	send_module_information_s "Docker Container Size Claimable" "$docker_size_containers" "Size used by not used containers"		
+}
+
+get_compose_container ()
+{
+	base='{{.Status}}'
+	compose='{{.Label "com.docker.compose.project"}}\t{{.Label "com.docker.compose.service"}}'
+	while  read -r line; do
+		cp_project=$(echo $line | awk '{print $1}')
+		cp_service=$(echo $line | awk '{print $2}')
+    	cp_active=$(echo $line | awk '{print $3}' | grep Up | wc -l)
+		container_count=$(($container_count + 1))
+		container[$container_count,1]=$cp_project
+		container[$container_count,2]=$cp_service
+		container[$container_count,3]=$cp_active
+	done < <( docker container ls --all --filter label=com.docker.compose.project --format "table $compose\t$base" | grep -v 'project')
+}
+
+
+compose_docker ()
+{
+	echo $container_count
+	for ((j=1;j<=$container_count;j++)) do
+  		send_module_information_b "Service:${container[$j,1]}\\${container[$j,2]}" "${container[$j,3]}" "Docker Service state"
+	done
+}
+
+#First get General docker information
+general_docker
+
+#Second Retrieve docker compose information
+get_compose_container
+compose_docker
