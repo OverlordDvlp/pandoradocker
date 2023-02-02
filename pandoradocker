@@ -21,69 +21,47 @@ container_count=0
 
 send_module_information ()
 {
+	case $4 in
+	  bool)
+    	type="generic_proc"
+    	;;
+	  data)
+	  	type="generic_data"
+		;;
+	  string)
+	    type="generic_data_string"
+		;;	
+	esac
+	
 	echo "<module>"
 	echo "  <name>$1</name>"
-	echo "  <type>$4</type>"
+	echo "  <type>$type</type>"
 	echo "  <data>$2</data>"
 	echo "  <description><![CDATA[$3]]></description>"
 	echo "  <module_group><![CDATA[Docker]]></module_group>"
 	echo "</module>"
 }
-
-send_module_information_b ()
-{
-	echo "<module>"
-	echo "  <name>$1</name>"
-	echo "  <type>generic_proc</type>"
-	echo "  <data>$2</data>"
-	echo "  <description><![CDATA[$3]]></description>"
-	echo "  <module_group><![CDATA[Docker]]></module_group>"
-	echo "</module>"
-}
-
-send_module_information_d ()
-{
-	echo "<module>"
-	echo "  <name>$1</name>"
-	echo "  <type>generic_data</type>"
-	echo "  <data>$2</data>"
-	echo "  <description><![CDATA[$3]]></description>"
-	echo "  <module_group><![CDATA[Docker]]></module_group>"
-	echo "</module>"
-}
-
-send_module_information_s ()
-{
-	echo "<module>"
-	echo "  <name>$1</name>"
-	echo "  <type>generic_data_string</type>"
-	echo "  <data>$2</data>"
-	echo "  <description><![CDATA[$3]]></description>"
-	echo "  <module_group><![CDATA[Docker]]></module_group>"
-	echo "</module>"
-}
-
 
 general_docker ()
 {
 	docker_active=$(systemctl status docker | grep Active | grep running | wc -l )
-	send_module_information_b 'Docker state' "$docker_active" "Docker General Running"
+	send_module_information 'Docker state' "$docker_active" "Docker General Running" "bool"
 	docker_total_images=$(docker system df | grep Images | awk '{printf $2}')
-	send_module_information_d "Docker Image Total" "$docker_total_images" "Number of all image on docker"
+	send_module_information "Docker Image Total" "$docker_total_images" "Number of all image on docker" "data"
 	docker_active_images=$(docker system df | grep Images | awk '{printf $3}')
-	send_module_information_d "Docker Image Active" "$docker_active_images" "Number of active image on docker"
+	send_module_information "Docker Image Active" "$docker_active_images" "Number of active image on docker" "data"
 	docker_size_images=$(docker system df | grep Images | awk '{printf $4}')
-	send_module_information_s "Docker Image Size" "$docker_size_images" "Size used by all images"
+	send_module_information "Docker Image Size" "$docker_size_images" "Size used by all images" "string"
 	docker_size_images=$(docker system df | grep Images | awk '{printf $5}')
-	send_module_information_s "Docker Image Size Claimable" "$docker_size_images" "Size used by not used images"	
+	send_module_information "Docker Image Size Claimable" "$docker_size_images" "Size used by not used images" "string"
 	docker_total_containers=$(docker system df | grep Containers | awk '{printf $2}')
-	send_module_information_d "Docker Container Total" "$docker_total_containers" "Number of all containers on docker"
+	send_module_information "Docker Container Total" "$docker_total_containers" "Number of all containers on docker" "data"
 	docker_active_containers=$(docker system df | grep Containers | awk '{printf $3}')
-	send_module_information_d "Docker Container Active" "$docker_active_containers" "Number of active containers on docker"
+	send_module_information "Docker Container Active" "$docker_active_containers" "Number of active containers on docker" "data"
 	docker_size_containers=$(docker system df | grep Containers | awk '{printf $4}')
-	send_module_information_s "Docker Container Size" "$docker_size_containers" "Size used by all containers"
+	send_module_information "Docker Container Size" "$docker_size_containers" "Size used by all containers" "string"
 	docker_size_containers=$(docker system df | grep Containers | awk '{printf $5}' )
-	send_module_information_s "Docker Container Size Claimable" "$docker_size_containers" "Size used by not used containers"		
+	send_module_information "Docker Container Size Claimable" "$docker_size_containers" "Size used by not used containers" "string"
 }
 
 get_compose_container ()
@@ -106,7 +84,7 @@ compose_docker ()
 {
 	echo $container_count
 	for ((j=1;j<=$container_count;j++)) do
-  		send_module_information_b "Service:${container[$j,1]}\\${container[$j,2]}" "${container[$j,3]}" "Docker Service state"
+  		send_module_information "Service:${container[$j,1]}\\${container[$j,2]}" "${container[$j,3]}" "Docker Service state" "bool"
 	done
 }
 
